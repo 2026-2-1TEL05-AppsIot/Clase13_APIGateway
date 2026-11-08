@@ -1,0 +1,133 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+
+            # [http://gatewayhost:8090/api/addition/2/20] -> Gateway -> [lb://service-addition/addition/2/20]
+            - id: service-addition
+              uri: lb://service-addition
+              predicates:
+                - Path=/api/addition/**
+              filters:
+                - StripPrefix=1
+
+            # [http://gatewayhost:8090/api/calculator/2/20] -> Gateway -> [lb://service-calculator/addcalculator/2/20]
+            - id: service-calculator-get
+              uri: lb://service-calculator
+              predicates:
+                - Path=/api/calculator/**
+                - Method=GET
+              filters:
+                - StripPrefix=2
+                - PrefixPath=/addcalculator
+
+            # [http://gatewayhost:8090/api/subtract/20/4] -> Gateway -> [lb://service-subtract/subtract/20/4]
+            - id: service-subtract
+              uri: lb://service-subtract
+              predicates:
+                - Path=/api/subtract/**
+              filters:
+                  - StripPrefix=1
+
+            # [http://gatewayhost:8090/api/calculator/2/20] -> Gateway -> [lb://service-calculator/addcalculator/2/20]
+            - id: service-calculator-post
+              uri: lb://service-calculator
+              predicates:
+                - Path=/api/calculator/**
+                - Method=POST
+              filters:
+                - StripPrefix=2
+                - PrefixPath=/addcalculator
+
+            - id: service-multiply
+              uri: lb://service-multiply
+              predicates:
+                - Path=/api/multiply/**
+              filters:
+                - StripPrefix=1
+
+            # --- Rutas nuevas: documentación OpenAPI de cada servicio ---
+            - id: addition-docs
+              uri: lb://service-addition
+              predicates:
+                - Path=/addition-docs/v3/api-docs
+              filters:
+                - RewritePath=/addition-docs/v3/api-docs,/v3/api-docs
+
+            - id: subtract-docs
+              uri: lb://service-subtract
+              predicates:
+                - Path=/subtract-docs/v3/api-docs
+              filters:
+                - RewritePath=/subtract-docs/v3/api-docs,/v3/api-docs
+
+            - id: multiply-docs
+              uri: lb://service-multiply
+              predicates:
+                - Path=/multiply-docs/v3/api-docs
+              filters:
+                - RewritePath=/multiply-docs/v3/api-docs,/v3/api-docs
+
+      globalcors:
+          add-to-simple-url-handler-mapping: true
+          cors-configurations:
+            '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+                allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      #defaultZone: http://eureka-server:8761/eureka
+  instance:
+    lease-renewal-interval-in-seconds: 10
+    prefer-ip-address: true   # evita que se registre como "mac" u otro hostname no resoluble
+
+info:
+  app:
+    name: EurekaClient Clase13 API Gateway
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,beans,loggers,info
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+
+  endpoint:
+    gateway:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: addition-service
+        url: /addition-docs/v3/api-docs
+      - name: subtract-service
+        url: /subtract-docs/v3/api-docs
+      - name: multiply-service
+        url: /multiply-docs/v3/api-docs
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+
+
